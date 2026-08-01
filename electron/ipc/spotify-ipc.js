@@ -527,9 +527,17 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
         }
     }
 
-    initialize().catch((error) => {
-        console.error(error)
-    })
+    if (win.webContents.isLoading()) {
+            win.webContents.once('did-finish-load', () => {
+                initialize().catch((error) => {
+                    console.error(error)
+                })
+            })
+        } else {
+            initialize().catch((error) => {
+                console.error(error)
+            })
+        }
 
     return {
         authenticate,

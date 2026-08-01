@@ -87,6 +87,17 @@ const resetConfirmYesButton =
 const resetConfirmNoButton =
     document.getElementById('reset-confirm-no')
 
+const clientIdPrompt =
+    document.getElementById('client-id-prompt')
+
+const clientIdPromptYesButton =
+    document.getElementById('client-id-prompt-yes')
+
+const clientIdPromptLaterButton =
+    document.getElementById('client-id-prompt-later')
+
+let clientIdPromptShown = false
+
 const backgroundModeInputs =
     document.querySelectorAll(
         'input[name="background-mode"]'
@@ -1205,6 +1216,18 @@ function applySettings(settings) {
         settings?.shortcuts?.quit || ''
 }
 
+function openClientIdPrompt() {
+
+    clientIdPrompt.classList.add('is-open')
+    clientIdPrompt.setAttribute('aria-hidden', 'false')
+}
+
+function closeClientIdPrompt() {
+
+    clientIdPrompt.classList.remove('is-open')
+    clientIdPrompt.setAttribute('aria-hidden', 'true')
+}
+
 function openSettings() {
 
     settingsPanel.classList.add('is-open')
@@ -2283,6 +2306,15 @@ if (window.electronAPI) {
 
         setDebugState('spotifyAuth', payload)
 
+        if (
+            !clientIdPromptShown &&
+            typeof payload?.configured === 'boolean' &&
+            payload.configured === false
+        ) {
+            clientIdPromptShown = true
+            openClientIdPrompt()
+        }
+
     })
 
     window.electronAPI.onSpotifyPlaybackState((payload) => {
@@ -2347,6 +2379,19 @@ resetConfirmYesButton?.addEventListener(
         confirmResetSettings().catch((error) => {
             console.error(error)
         })
+    }
+)
+
+clientIdPromptLaterButton?.addEventListener(
+    'click',
+    closeClientIdPrompt
+)
+
+clientIdPromptYesButton?.addEventListener(
+    'click',
+    () => {
+        closeClientIdPrompt()
+        openSettings()
     }
 )
 
