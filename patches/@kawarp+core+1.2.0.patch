@@ -1,0 +1,77 @@
+diff --git a/node_modules/@kawarp/core/dist/index.js b/node_modules/@kawarp/core/dist/index.js
+index a577566..d666039 100644
+--- a/node_modules/@kawarp/core/dist/index.js
++++ b/node_modules/@kawarp/core/dist/index.js
+@@ -79,6 +79,8 @@ const DOMAIN_WARP_SHADER = `
+   uniform sampler2D u_texture;
+   uniform float u_time;
+   uniform float u_intensity;
++  uniform vec2 u_resolution;
++  uniform float u_patternScale;
+   varying vec2 v_texCoord;
+ 
+   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+@@ -112,16 +114,23 @@ const DOMAIN_WARP_SHADER = `
+     vec2 uv = v_texCoord;
+     float t = u_time * 0.05;
+ 
+-    vec2 center = uv - 0.5;
++    // Physical-pixel-space coordinate, anchored to canvas center and
++    // normalized against a FIXED reference size instead of the current
++    // canvas size, so the pattern's absolute size stays constant as the
++    // canvas grows (resizing reveals more of it instead of stretching it).
++    vec2 pixelPos = (v_texCoord - 0.5) * u_resolution;
++    vec2 worldUV = pixelPos / max(u_patternScale, 1.0) + 0.5;
++
++    vec2 center = worldUV - 0.5;
+     float centerWeight = 1.0 - smoothstep(0.0, 0.7, length(center));
+ 
+     // Large-scale movement (slow, big blobs)
+-    float n1 = snoise(uv * 0.35 + vec2(t, t * 0.7));
+-    float n2 = snoise(uv * 0.35 + vec2(-t * 0.8, t * 0.5) + vec2(50.0, 50.0));
++    float n1 = snoise(worldUV * 0.35 + vec2(t, t * 0.7));
++    float n2 = snoise(worldUV * 0.35 + vec2(-t * 0.8, t * 0.5) + vec2(50.0, 50.0));
+ 
+     // Medium-scale detail (adds organic movement)
+-    float n3 = snoise(uv * 0.9 + vec2(t * 1.2, -t) + vec2(100.0, 0.0));
+-    float n4 = snoise(uv * 0.9 + vec2(-t, t * 1.1) + vec2(0.0, 100.0));
++    float n3 = snoise(worldUV * 0.9 + vec2(t * 1.2, -t) + vec2(100.0, 0.0));
++    float n4 = snoise(worldUV * 0.9 + vec2(-t, t * 1.1) + vec2(0.0, 100.0));
+ 
+     // Combine two octaves
+     vec2 warp = vec2(
+@@ -237,6 +246,7 @@ export class Kawarp {
+         this._tintIntensity = options.tintIntensity ?? 0.15;
+         this._dithering = options.dithering ?? 0.008;
+         this._scale = options.scale ?? 1.0;
++        this._patternScale = options.patternScale ?? 400;
+         // Create shader programs
+         this.blurProgram = this.createProgram(VERTEX_SHADER, KAWASE_BLUR_SHADER);
+         this.blendProgram = this.createProgram(VERTEX_SHADER, BLEND_SHADER);
+@@ -264,6 +274,8 @@ export class Kawarp {
+                 texture: gl.getUniformLocation(this.warpProgram, "u_texture"),
+                 time: gl.getUniformLocation(this.warpProgram, "u_time"),
+                 intensity: gl.getUniformLocation(this.warpProgram, "u_intensity"),
++                resolution: gl.getUniformLocation(this.warpProgram, "u_resolution"),
++                patternScale: gl.getUniformLocation(this.warpProgram, "u_patternScale"),
+             },
+             tint: {
+                 texture: gl.getUniformLocation(this.tintProgram, "u_texture"),
+@@ -637,6 +649,8 @@ export class Kawarp {
+             gl.uniform1i(this.uniforms.warp.texture, 0);
+             gl.uniform1f(this.uniforms.warp.time, time);
+             gl.uniform1f(this.uniforms.warp.intensity, this._warpIntensity);
++            gl.uniform2f(this.uniforms.warp.resolution, width, height);
++            gl.uniform1f(this.uniforms.warp.patternScale, this._patternScale);
+             gl.drawArrays(gl.TRIANGLES, 0, 6);
+             // Output with saturation and dithering
+             gl.useProgram(this.outputProgram);
+@@ -663,6 +677,8 @@ export class Kawarp {
+             gl.uniform1i(this.uniforms.warp.texture, 0);
+             gl.uniform1f(this.uniforms.warp.time, time);
+             gl.uniform1f(this.uniforms.warp.intensity, this._warpIntensity);
++            gl.uniform2f(this.uniforms.warp.resolution, width, height);
++            gl.uniform1f(this.uniforms.warp.patternScale, this._patternScale);
+             gl.drawArrays(gl.TRIANGLES, 0, 6);
+             // Output with vignette, saturation and dithering
+             gl.useProgram(this.outputProgram);

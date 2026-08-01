@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>Spotify Lyrics Overlay</title>
+
+    <link
+        rel="stylesheet"
+        href="./styles/overlay.css"
+    />
+</head>
+
+<body>
+
+    <div id="overlay">
+
+        <div
+            id="resize-handle"
+            aria-hidden="true"
+        ></div>
+        
+        <canvas id="kawarp-background"></canvas>
+        <canvas id="webgl-background"></canvas>
+
+        <div id="liquid-background">
+
+            <div class="liquid-scene active" id="scene-a">
+
+                <div class="liquid-layer liquid-layer-1"></div>
+                <div class="liquid-layer liquid-layer-2"></div>
+                <div class="liquid-layer liquid-layer-3"></div>
+                <div class="liquid-layer liquid-layer-4"></div>
+                <div class="liquid-layer liquid-layer-5"></div>
+
+            </div>
+
+            <div class="liquid-scene" id="scene-b">
+
+                <div class="liquid-layer liquid-layer-1"></div>
+                <div class="liquid-layer liquid-layer-2"></div>
+                <div class="liquid-layer liquid-layer-3"></div>
+                <div class="liquid-layer liquid-layer-4"></div>
+                <div class="liquid-layer liquid-layer-5"></div>
+
+            </div>
+
+        </div>
+
+        <div id="ambient-glow"></div>
+
+        <header id="track-header">
+
+            <img
+                id="track-artwork"
+                alt=""
+            />
+
+            <div id="track-meta">
+
+                <div id="track-title">
+                    <span class="track-scroll-text">
+                        Spotify Lyrics Overlay
+                    </span>
+                </div>
+
+                <div id="track-artist">
+                    <span class="track-scroll-text">
+                        Waiting for Spotify
+                    </span>
+                </div>
+
+            </div>
+
+        </header>
+
+        <div id="window-controls">
+
+            <button
+                id="settings-button"
+                class="window-control settings-control"
+                type="button"
+                aria-label="Open settings"
+            ></button>
+
+            <button
+                id="minimize-button"
+                class="window-control minimize-control"
+                type="button"
+                aria-label="Minimize"
+            ></button>
+
+            <button
+                id="close-button"
+                class="window-control close-control"
+                type="button"
+                aria-label="Close"
+            ></button>
+
+        </div>
+
+        <div id="lyrics-wrapper">
+
+            <div id="lyrics-list"></div>
+
+        </div>
+
+        <button
+            id="sync-lyrics-button"
+            type="button"
+            aria-label="Sync lyrics to current line"
+        >
+            Sync
+        </button>
+
+        <section
+            id="settings-panel"
+            aria-hidden="true"
+        >
+
+            <div class="settings-content">
+
+                <h2>Settings</h2>
+
+                <label>
+                    <span>Spotify Client ID</span>
+                    <input
+                        id="spotify-client-id"
+                        type="text"
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                </label>
+
+                <div class="settings-group-title">
+                    Background Effect
+                </div>
+
+                <div class="background-mode-group">
+
+                    <div class="background-mode-option">
+
+                        <div class="mode-preview mode-preview-css">
+                            <div class="preview-liquid-layer preview-liquid-layer-1"></div>
+                            <div class="preview-liquid-layer preview-liquid-layer-2"></div>
+                            <div class="preview-liquid-layer preview-liquid-layer-3"></div>
+                            <div class="preview-liquid-layer preview-liquid-layer-4"></div>
+                            <div class="preview-liquid-layer preview-liquid-layer-5"></div>
+                        </div>
+
+                        <label class="radio-option">
+                            <span>CSS Liquid</span>
+                            <input type="radio" name="background-mode" value="css" />
+                        </label>
+
+                    </div>
+
+                    <div class="background-mode-option">
+
+                        <canvas class="mode-preview" id="webgl-preview"></canvas>
+
+                        <label class="radio-option">
+                            <span>WebGL</span>
+                            <input type="radio" name="background-mode" value="webgl" />
+                        </label>
+
+                    </div>
+
+                    <div class="background-mode-option">
+
+                        <canvas class="mode-preview" id="kawarp-preview"></canvas>
+
+                        <label class="radio-option">
+                            <span>Kawarp</span>
+                            <input type="radio" name="background-mode" value="kawarp" />
+                        </label>
+
+                    </div>
+
+                </div>
+
+                <div class="settings-group-title">Shortcuts</div>
+
+                <label>
+                    <span>Click-through</span>
+                    <input
+                        id="shortcut-click-through"
+                        type="text"
+                        readonly
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Press shortcut.."
+                    />
+                </label>
+
+                <label>
+                    <span>Spotify login</span>
+                    <input
+                        id="shortcut-spotify-login"
+                        type="text"
+                        readonly
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Press shortcut.."
+                    />
+                </label>
+
+                <label>
+                    <span>Refresh playback</span>
+                    <input
+                        id="shortcut-playback-refresh"
+                        type="text"
+                        readonly
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Press shortcut.."
+                    />
+                </label>
+
+                <label>
+                    <span>Quit app</span>
+                    <input
+                        id="shortcut-quit"
+                        type="text"
+                        readonly
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Press shortcut.."
+                    />
+                </label>
+
+                <button
+                    id="reset-settings"
+                    type="button"
+                    class="reset-settings-button"
+                >
+                    Reset to Defaults
+                </button>
+
+                <div class="settings-actions">
+
+                    <button
+                        id="cancel-settings"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        id="save-settings"
+                        type="button"
+                    >
+                        Save
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div
+                id="reset-confirm-dialog"
+                aria-hidden="true"
+            >
+                <div class="confirm-dalog-box">
+
+                    <h3 class="confirm-dialog-title">Are you sure?</h3>
+                    <p class="confirm-dialog-subtitle">This action cannot be undone.</p>
+
+                    <div class="confirm-dialog-actions">
+                        <button id="reset-confirm-no" type="button" class="confirm-no">No</button>
+                        <button id="reset-confirm-yes" type="button" class="confirm-yes">Yes</button>
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <script type="module" src="./js/renderer.js"></script>
+
+</body>
+
+</html>
