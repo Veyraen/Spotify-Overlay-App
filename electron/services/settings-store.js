@@ -10,7 +10,8 @@ const DEFAULT_SETTINGS = {
     overlay: {
         clickThrough: false,
         clickThroughOpacity: 0.5,
-        backgroundMode: "kawarp"
+        backgroundMode: "kawarp",
+        lyricAnimation: "smooth"
     },
     spotify: {
         clientId: ''

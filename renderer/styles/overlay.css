@@ -971,6 +971,19 @@ body {
     animation: liquidDrift5 16s ease-in-out infinite alternate;
 }
 
+/* ── Lyric animation preview ── */
+
+.lyric-anim-preview {
+
+    background: rgba(0,0,0,0.26);
+
+    border: 1px solid rgba(255,255,255,0.16);
+}
+
+.lyric-anim-bar {
+    display: none;
+}
+
 .radio-option {
 
     display: flex;
@@ -1575,7 +1588,8 @@ body {
 
     opacity: 0.18;
 
-    transform: scale(0.82);
+    transform:
+        scale(0.82);
 
     filter: blur(1px);
 
@@ -1602,7 +1616,8 @@ body {
 
     opacity: 1;
 
-    transform: scale(1.02);
+    transform:
+        scale(1.02);
 
     filter: blur(0);
 }
@@ -1773,7 +1788,8 @@ body {
 
     color: rgba(255,255,255,0.55);
 
-    transform: scale(0.92);
+    transform:
+        scale(0.92);
 
     filter: blur(1px);
 }
@@ -1786,7 +1802,8 @@ body {
 
     color: rgba(255,255,255,0.55);
 
-    transform: scale(0.92);
+    transform:
+        scale(0.92);
 
     filter: blur(2px);
 }

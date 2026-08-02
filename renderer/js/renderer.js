@@ -103,6 +103,11 @@ const backgroundModeInputs =
         'input[name="background-mode"]'
     )
 
+const lyricAnimationInputs =
+    document.querySelectorAll(
+        'input[name="lyric-animation"]'
+    )
+
 const webglPreviewCanvas =
     document.getElementById('webgl-preview')
 
@@ -314,8 +319,13 @@ let lyricPreviewFrame = null
 let cachedWrapperHeight = 0
 let cachedLyricsHeight = 0
 let cachedLyricOffsets = []
+let lyricStaggerFrame = null
+let lyricStaggerCleanupTimer = null
 const LYRIC_WHEEL_SENSITIVITY = 1.05
 const LYRIC_SYNC_BUTTON_THRESHOLD_RATIO = 0.22
+const LYRIC_STAGGER_DELAY_MS = 55
+const LYRIC_STAGGER_DURATION_MS = 640
+const LYRIC_STAGGER_MAX_DELAY_MS = 440
 
 function clamp(value, min, max) {
 
@@ -335,6 +345,34 @@ function cacheLyricLayout() {
             element => element.offsetTop
         )
 }
+
+function getLyricVisualTops() {
+
+    const wrapperRect =
+        lyricsWrapper.getBoundingClientRect()
+
+    return lyricElements.map((element) => (
+        element.getBoundingClientRect().top - wrapperRect.top
+    ))
+}
+
+function clearLyricStaggerState() {
+
+    if (lyricStaggerFrame) {
+        cancelAnimationFrame(lyricStaggerFrame)
+        lyricStaggerFrame = null
+    }
+
+    if (lyricStaggerCleanupTimer) {
+        clearTimeout(lyricStaggerCleanupTimer)
+        lyricStaggerCleanupTimer = null
+    }
+
+    lyricElements.forEach((element) => {
+        element.getAnimations().forEach((anim) => anim.cancel())
+    })
+}
+
 
 function rgbToHsl(red, green, blue) {
 
@@ -771,6 +809,8 @@ function createLyricLetters(text, className) {
 
 function renderLyrics(nextLyrics = lyrics) {
 
+    clearLyricStaggerState()
+
     lyrics = nextLyrics
     lyricPreviewOffset = 0
 
@@ -924,6 +964,7 @@ function applyLyricReelPosition(animate = true) {
         )
 
     if (!animate) {
+        clearLyricStaggerState()
         lyricsList.classList.add('is-positioning')
     }
 
@@ -1113,10 +1154,130 @@ function setActiveLyric(index) {
 
     if (nextIndex === activeIndex) return
 
+    if (centerFrame) {
+        cancelAnimationFrame(centerFrame)
+        centerFrame = null
+    }
+
+    const lyricAnimation =
+        currentSettings?.overlay?.lyricAnimation || 'smooth'
+
+    if (lyricAnimation === 'stagger' && !settingsPanel?.classList.contains('is-open')) {
+        setActiveLyricStagger(nextIndex)
+    } else {
+        setActiveLyricSmooth(nextIndex)
+    }
+}
+
+function setActiveLyricSmooth(nextIndex) {
+
+    // Cancel any in-flight stagger before switching back to smooth
+    if (lyricStaggerFrame) {
+        cancelAnimationFrame(lyricStaggerFrame)
+        lyricStaggerFrame = null
+    }
+
+    if (lyricStaggerCleanupTimer) {
+        clearTimeout(lyricStaggerCleanupTimer)
+        lyricStaggerCleanupTimer = null
+    }
+
+    lyricElements.forEach((el) => {
+        el.getAnimations().forEach((anim) => anim.cancel())
+    })
+
+    activeIndex = nextIndex
+    lyricPreviewOffset = 0
+
+    updateLyricClasses()
+    cacheLyricLayout()
+    applyLyricReelPosition(true)
+}
+
+function setActiveLyricStagger(nextIndex) {
+
+    // Record where every line is RIGHT NOW, before anything moves
+    const previousTops = getLyricVisualTops()
+
+    // Cancel any in-flight stagger animations
+    if (lyricStaggerFrame) {
+        cancelAnimationFrame(lyricStaggerFrame)
+        lyricStaggerFrame = null
+    }
+
+    if (lyricStaggerCleanupTimer) {
+        clearTimeout(lyricStaggerCleanupTimer)
+        lyricStaggerCleanupTimer = null
+    }
+
+    lyricElements.forEach((el) => {
+        el.getAnimations().forEach((anim) => anim.cancel())
+    })
+
     activeIndex = nextIndex
 
     updateLyricClasses()
-    centerActiveLyric()
+    cacheLyricLayout()
+
+    // Snap the reel instantly, preserving any user preview scroll offset
+    const baseY = getActiveLyricBaseY()
+    const previewBounds = getLyricPreviewBounds(baseY)
+    lyricPreviewOffset = clamp(lyricPreviewOffset, previewBounds.min, previewBounds.max)
+
+    lyricsList.classList.add('is-positioning')
+    lyricsList.style.setProperty('--lyric-reel-y', `${baseY + lyricPreviewOffset}px`)
+    updateLyricSyncButton()
+    lyricsList.offsetHeight  // flush
+
+    // Read where lines landed while everything is still frozen (no transitions)
+    const nextTops = getLyricVisualTops()
+
+    lyricsList.classList.remove('is-positioning')
+
+    const wrapperHeight = lyricsWrapper.clientHeight
+
+    // Rank only visible lines top-to-bottom — upper lines clear out first,
+    // new active line settles in last
+    const visibleOrder = lyricElements
+        .map((element, i) => ({ element, i, top: nextTops[i] }))
+        .filter(({ top }) => top > -wrapperHeight && top < wrapperHeight * 2)
+        .sort((a, b) => a.top - b.top)
+
+    const lineRanks = new Map(visibleOrder.map((entry, rank) => [entry.element, rank]))
+
+    let longestDelay = 0
+
+    lyricElements.forEach((element, i) => {
+
+        const deltaY = previousTops[i] - nextTops[i]
+
+        if (Math.abs(deltaY) < 1 || !lineRanks.has(element)) return
+
+        const rank = lineRanks.get(element)
+        const delayMs = Math.min(rank * LYRIC_STAGGER_DELAY_MS, LYRIC_STAGGER_MAX_DELAY_MS)
+
+        longestDelay = Math.max(longestDelay, delayMs)
+
+        const anim = element.animate(
+            [
+                { transform: `translateY(${deltaY}px)` },
+                { transform: `translateY(0px)` }
+            ],
+            {
+                duration: LYRIC_STAGGER_DURATION_MS,
+                delay: delayMs,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                fill: 'backwards',
+                composite: 'add'
+            }
+        )
+
+        anim.onfinish = () => anim.cancel()
+    })
+
+    lyricStaggerCleanupTimer = setTimeout(() => {
+        lyricStaggerCleanupTimer = null
+    }, longestDelay + LYRIC_STAGGER_DURATION_MS + 80)
 }
 
 function syncLyricsToCurrent() {
@@ -1197,6 +1358,16 @@ function applySettings(settings) {
 
         radio.checked =
             radio.value === backgroundMode
+
+    })
+
+    const lyricAnimation =
+        settings?.overlay?.lyricAnimation || 'smooth'
+
+    lyricAnimationInputs.forEach((radio) => {
+
+        radio.checked =
+            radio.value === lyricAnimation
 
     })
 
@@ -1320,6 +1491,11 @@ async function saveSettings() {
             .find(radio => radio.checked)
             ?.value || 'kawarp'
 
+    const selectedLyricAnimation =
+        [...lyricAnimationInputs]
+            .find(radio => radio.checked)
+            ?.value || 'smooth'
+
     const nextSettings =
         {
             ...currentSettings,
@@ -1330,7 +1506,8 @@ async function saveSettings() {
 
             overlay: {
                 ...currentSettings.overlay,
-                backgroundMode: selectedBackgroundMode
+                backgroundMode: selectedBackgroundMode,
+                lyricAnimation: selectedLyricAnimation
             },
             
             shortcuts: {
