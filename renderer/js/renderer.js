@@ -238,6 +238,7 @@ let webglPreviewRenderer = null
 let webglPreviewRunning = false
 let webglPreviewAnimationFrame = null
 let webglPreviewFrameTimer = null
+let activeSettingsPreviewMode = null
 
 let kawarp = null
 let kawarpInitialized = false
@@ -254,6 +255,8 @@ let webglFrameTimer = null
 let webglRunning = false
 
 let currentTexture = null
+let webglFallbackTexture = null
+let pendingWebGLTextureDispose = null
 let webglArtworkUrl = null
 let fadeStartTime = 0
 const CROSSFADE_DURATION = 800
@@ -711,102 +714,6 @@ function getActiveRevealDurationMs(index) {
     )
 }
 
-function getActiveShakeDurationMs(index) {
-
-    const currentTimeMs =
-        getLyricTimeMs(lyrics[index])
-
-    const nextTimeMs =
-        getLyricTimeMs(lyrics[index + 1])
-
-    if (!Number.isFinite(currentTimeMs) || !Number.isFinite(nextTimeMs)) {
-        return 1800
-    }
-
-    return Math.max(
-        450,
-        nextTimeMs - currentTimeMs
-    )
-}
-
-function createLyricLetters(text, className) {
-
-    const fragment =
-        document.createDocumentFragment()
-
-    let letterIndex =
-        0
-
-    Array
-        .from(text.split(/(\s+)/))
-        .forEach((token) => {
-
-            if (!token) return
-
-            if (/^\s+$/.test(token)) {
-
-                const space =
-                    document.createElement('span')
-
-                space.classList.add('lyric-space')
-                space.textContent =
-                    '\u00A0'.repeat(token.length)
-
-                fragment.appendChild(space)
-                letterIndex += token.length
-                return
-            }
-
-            const word =
-                document.createElement('span')
-
-            word.classList.add('lyric-word')
-
-            Array
-                .from(token)
-                .forEach((letter) => {
-
-                    const span =
-                        document.createElement('span')
-
-                    span.classList.add(className)
-                    span.classList.add('lyric-letter')
-                    span.textContent = letter
-
-                    const shakeSeed =
-                        ((letterIndex * 37) % 11) - 5
-
-                    const verticalSeed =
-                        ((letterIndex * 19) % 9) - 4
-
-                    const rotateSeed =
-                        ((letterIndex * 23) % 13) - 6
-
-                    span.style.setProperty(
-                        '--letter-shake-x',
-                        `${shakeSeed * 0.16}px`
-                    )
-
-                    span.style.setProperty(
-                        '--letter-shake-y',
-                        `${verticalSeed * 0.13}px`
-                    )
-
-                    span.style.setProperty(
-                        '--letter-shake-rotate',
-                        `${rotateSeed * 0.08}deg`
-                    )
-
-                    word.appendChild(span)
-                    letterIndex += 1
-                })
-
-            fragment.appendChild(word)
-        })
-
-    return fragment
-}
-
 function renderLyrics(nextLyrics = lyrics) {
 
     clearLyricStaggerState()
@@ -832,23 +739,13 @@ function renderLyrics(nextLyrics = lyrics) {
             document.createElement('span')
 
         baseText.classList.add('lyric-text-base')
-        baseText.appendChild(
-            createLyricLetters(
-                lyricText,
-                'lyric-base-letter'
-            )
-        )
+        baseText.textContent = lyricText
 
         const highlightText =
             document.createElement('span')
 
         highlightText.classList.add('lyric-text-highlight')
-        highlightText.appendChild(
-            createLyricLetters(
-                lyricText,
-                'lyric-highlight-letter'
-            )
-        )
+        highlightText.textContent = lyricText
 
         const revealEdge =
             document.createElement('span')
@@ -1002,11 +899,6 @@ function updateLyricClasses() {
             lineElement.style.setProperty(
                 '--active-reveal-duration',
                 `${getActiveRevealDurationMs(index)}ms`
-            )
-
-            lineElement.style.setProperty(
-                '--active-shake-duration',
-                `${getActiveShakeDurationMs(index)}ms`
             )
 
             lineElement.classList.add('active')
@@ -1406,8 +1298,7 @@ function openSettings() {
 
     resizeHandle?.classList.add('is-disabled')
 
-    resumeKawarpPreview()
-    resumeWebGLPreviewBackground()
+    syncSettingsPreviewPlayback()
 }
 
 function toggleSettings() {
@@ -1427,8 +1318,7 @@ function closeSettings() {
 
     resizeHandle?.classList.remove('is-disabled')
 
-    pauseKawarpPreview()
-    pauseWebGLPreviewBackground()
+    pauseAllSettingsPreviews()
 
     if (currentSettings) {
         applySettings(currentSettings)
@@ -1755,6 +1645,56 @@ function pauseKawarpPreview() {
     previewKawarp?.stop?.()
 }
 
+function getSelectedBackgroundMode() {
+
+    return [...backgroundModeInputs]
+        .find((radio) => radio.checked)
+        ?.value || currentSettings?.overlay?.backgroundMode || 'kawarp'
+}
+
+function pauseAllSettingsPreviews() {
+
+    activeSettingsPreviewMode = null
+
+    settingsPanel?.classList.remove(
+        'is-previewing-css',
+        'is-previewing-webgl',
+        'is-previewing-kawarp'
+    )
+
+    pauseKawarpPreview()
+    pauseWebGLPreviewBackground()
+}
+
+function syncSettingsPreviewPlayback() {
+
+    if (!settingsPanel?.classList.contains('is-open')) return
+
+    if (document.hidden) {
+        pauseAllSettingsPreviews()
+        return
+    }
+
+    const mode =
+        getSelectedBackgroundMode()
+
+    if (activeSettingsPreviewMode === mode) return
+
+    pauseAllSettingsPreviews()
+    activeSettingsPreviewMode = mode
+
+    settingsPanel?.classList.add(`is-previewing-${mode}`)
+
+    if (mode === 'kawarp') {
+        resumeKawarpPreview()
+        return
+    }
+
+    if (mode === 'webgl') {
+        resumeWebGLPreviewBackground()
+    }
+}
+
 function resumeKawarpBackground() {
 
     if (!kawarpInitialized) {
@@ -2029,6 +1969,9 @@ function initializeWebGLTest() {
     fallbackTexture.needsUpdate =
         true
 
+    webglFallbackTexture =
+        fallbackTexture
+
     webglMaterial.uniforms.uTextureA.value =
         fallbackTexture
 
@@ -2120,7 +2063,7 @@ function renderWebGLPreviewFrame() {
             Math.min(elapsed / CROSSFADE_DURATION, 1)
 
         if (webglMaterial.uniforms.uMix.value >= 1) {
-            fadeStartTime = 0
+            completeWebGLCrossfade()
         }
     }
 
@@ -2166,7 +2109,8 @@ function pauseWebGLPreviewBackground() {
     }
 
     if (!webglRunning) {           // don't stop the shared clock if the
-        webglClock?.stop?.()        // real webgl background still needs it
+        completeWebGLCrossfade()    // real webgl background still needs it
+        webglClock?.stop?.()
     }
 }
 
@@ -2213,7 +2157,7 @@ function renderWebGLFrame() {
 
         ) {
 
-            fadeStartTime = 0
+            completeWebGLCrossfade()
         }
     }
 
@@ -2267,7 +2211,38 @@ function pauseWebGLBackground() {
         webglFrameTimer = null
     }
 
+    if (!webglPreviewRunning) {
+        completeWebGLCrossfade()
+    }
+
     webglClock?.stop?.()
+}
+
+function disposeWebGLTexture(texture) {
+
+    if (
+        !texture ||
+        texture === currentTexture ||
+        texture === webglFallbackTexture
+    ) {
+        return
+    }
+
+    texture.dispose?.()
+}
+
+function completeWebGLCrossfade() {
+
+    fadeStartTime = 0
+
+    if (webglMaterial && currentTexture) {
+        webglMaterial.uniforms.uTextureA.value = currentTexture
+        webglMaterial.uniforms.uTextureB.value = currentTexture
+        webglMaterial.uniforms.uMix.value = 1
+    }
+
+    disposeWebGLTexture(pendingWebGLTextureDispose)
+    pendingWebGLTextureDispose = null
 }
 
 function updateWebGLArtwork(url) {
@@ -2311,10 +2286,15 @@ function updateWebGLArtwork(url) {
                 return
             }
 
+            disposeWebGLTexture(pendingWebGLTextureDispose)
+
+            const previousTexture =
+                currentTexture
+
             webglMaterial
                 .uniforms
                 .uTextureA
-                .value = currentTexture
+                .value = previousTexture
 
             webglMaterial
                 .uniforms
@@ -2328,6 +2308,9 @@ function updateWebGLArtwork(url) {
 
             currentTexture =
                 newTexture
+
+            pendingWebGLTextureDispose =
+                previousTexture
 
             fadeStartTime =
                 performance.now()
@@ -2517,7 +2500,7 @@ if (window.electronAPI) {
 
             if (
                 (currentSettings?.overlay?.backgroundMode || 'kawarp') === 'webgl' ||
-                webglPreviewInitialized
+                webglPreviewRunning
             ) {
                 updateWebGLArtwork(
                     payload?.track?.imageUrl
@@ -2529,6 +2512,26 @@ if (window.electronAPI) {
 }
 
 settingsButton.addEventListener('click', toggleSettings)
+
+backgroundModeInputs.forEach((radio) => {
+    radio.addEventListener('change', syncSettingsPreviewPlayback)
+})
+
+window.addEventListener('blur', pauseAllSettingsPreviews)
+
+window.addEventListener('focus', () => {
+    syncSettingsPreviewPlayback()
+})
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pauseAllSettingsPreviews()
+        return
+    }
+
+    syncSettingsPreviewPlayback()
+})
+
 cancelSettingsButton.addEventListener('click', closeSettings)
 saveSettingsButton.addEventListener('click', () => {
     saveSettings().catch((error) => {

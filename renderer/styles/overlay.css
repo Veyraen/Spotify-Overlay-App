@@ -905,7 +905,14 @@ body {
     background-position: center;
     background-repeat: no-repeat;
 
+    animation-play-state: paused;
+
     pointer-events: none;
+}
+
+#settings-panel.is-previewing-css .preview-liquid-layer {
+
+    animation-play-state: running;
 }
 
 .preview-liquid-layer-1 {
@@ -1695,33 +1702,6 @@ body {
     pointer-events: none;
 }
 
-.lyric-letter {
-
-    display: inline-block;
-
-    transform:
-        translate3d(0, 0, 0)
-        rotate(0deg);
-
-    transform-origin: center;
-
-    will-change: transform;
-}
-
-.lyric-word {
-
-    display: inline-block;
-
-    white-space: nowrap;
-}
-
-.lyric-space {
-
-    display: inline-block;
-
-    width: 0.34em;
-}
-
 .lyric-line.active .lyric-text-highlight {
 
     opacity: 1;
@@ -1731,16 +1711,6 @@ body {
             var(--active-reveal-duration, 1200ms)
             linear
             forwards;
-}
-
-.lyric-line.active .lyric-letter {
-
-    animation:
-        activeLyricLetterShake
-            var(--active-shake-duration, 1800ms)
-            ease-in-out
-            forwards;
-
 }
 
 .lyric-reveal-edge {
@@ -2030,126 +2000,6 @@ body {
         top: calc(100% - 0.08em);
 
         opacity: 0;
-    }
-}
-
-@keyframes activeLyricLetterShake {
-
-    0%,
-    8% {
-        transform:
-            translate3d(0, 0, 0)
-            rotate(0deg);
-    }
-
-    16% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * -0.14),
-                calc(var(--letter-shake-y, 0px) * 0.14),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * -0.14));
-    }
-
-    25% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * 0.25),
-                calc(var(--letter-shake-y, 0px) * -0.25),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * 0.25));
-    }
-
-    34% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * -0.34),
-                calc(var(--letter-shake-y, 0px) * -0.22),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * -0.34));
-    }
-
-    42% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * 0.42),
-                calc(var(--letter-shake-y, 0px) * 0.36),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * 0.42));
-    }
-
-    50% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * -0.5),
-                calc(var(--letter-shake-y, 0px) * 0.5),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * -0.5));
-    }
-
-    58% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * 0.58),
-                calc(var(--letter-shake-y, 0px) * -0.5),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * 0.58));
-    }
-
-    66% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * -0.66),
-                calc(var(--letter-shake-y, 0px) * -0.58),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * -0.66));
-    }
-
-    75% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * 0.75),
-                calc(var(--letter-shake-y, 0px) * 0.75),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * 0.75));
-    }
-
-    84% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * -0.84),
-                calc(var(--letter-shake-y, 0px) * 0.72),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * -0.84));
-    }
-
-    92% {
-        transform:
-            translate3d(
-                calc(var(--letter-shake-x, 0px) * 0.92),
-                calc(var(--letter-shake-y, 0px) * -0.84),
-                0
-            )
-            rotate(calc(var(--letter-shake-rotate, 0deg) * 0.92));
-    }
-
-    100% {
-        transform:
-            translate3d(
-                var(--letter-shake-x, 0px),
-                var(--letter-shake-y, 0px),
-                0
-            )
-            rotate(var(--letter-shake-rotate, 0deg));
     }
 }
 

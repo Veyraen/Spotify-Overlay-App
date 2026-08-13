@@ -1,16 +1,18 @@
 {
   "name": "spotify-overlay-app",
-  "version": "1.1.5",
+  "version": "1.2.5",
   "description": "Spotify Overlay App",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "electron": "^39.0.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "patch-package": "^8.0.1"
   },
   "dependencies": {
     "@kawarp/core": "^1.2.0",
