@@ -11,6 +11,9 @@ console.log(
 const lyricsList =
     document.getElementById('lyrics-list')
 
+const noLyricsMessage =
+    document.getElementById('no-lyrics-message')
+
 const lyricsWrapper =
     document.getElementById('lyrics-wrapper')
 
@@ -2439,6 +2442,8 @@ if (window.electronAPI) {
 
         if (!payload || !Array.isArray(payload.lines)) return
 
+        noLyricsMessage?.classList.remove('is-visible')
+
         activeIndex = 0
 
         renderLyrics(payload.lines)
@@ -2450,6 +2455,16 @@ if (window.electronAPI) {
         if (!payload || !Number.isInteger(payload.index)) return
 
         setActiveLyric(payload.index)
+
+    })
+
+    window.electronAPI.onLyricsUnavailable((payload) => {
+
+        activeIndex = 0
+        
+        renderLyrics([])
+
+        noLyricsMessage?.classList.add('is-visible')
 
     })
 

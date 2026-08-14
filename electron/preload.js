@@ -33,6 +33,19 @@ contextBridge.exposeInMainWorld(
 
         },
 
+        onLyricsUnavailable: (callback) => {
+
+            const listener =
+                (_, data) => callback(data)
+
+            ipcRenderer.on('lyrics:unavailable', listener)
+
+            return () => {
+                ipcRenderer.removeListener('lyrics:unavailable', listener)
+            }
+
+        },
+
         onClickThroughChange: (callback) => {
 
             const listener =

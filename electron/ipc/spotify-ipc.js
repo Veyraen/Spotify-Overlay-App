@@ -148,6 +148,8 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
                     'Lyrics not found:',
                     `${track.artists.join(', ')} - ${track.name}`
                 )
+
+                lyricsController.clearLyrics({ track })
                 return null
             }
 

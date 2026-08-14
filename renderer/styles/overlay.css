@@ -1495,6 +1495,33 @@ body {
     transition: none;
 }
 
+#no-lyrics-message {
+
+    display: none;
+
+    position: absolute;
+    inset: 0;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    padding: 0 calc(24px * var(--ui-scale));
+
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: calc(14px * var(--ui-scale));
+    font-weight: 400;
+
+    pointer-events: none;
+}
+
+#no-lyrics-message.is-visible {
+
+    display: flex;
+}
+
 #sync-lyrics-button {
 
     position: absolute;

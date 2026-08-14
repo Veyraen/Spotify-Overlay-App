@@ -72,6 +72,34 @@ function startLyricsIPC(win) {
         scheduler.start(startPositionMs, playing)
     }
 
+        const clearLyrics = ({
+        track = null,
+        reason = 'no-lyrics'
+    } = {}) => {
+
+        if (win.webContents.isLoading()) {
+
+            win.webContents.once('did-finish-load', () => {
+                clearLyrics({ track, reason })
+            })
+
+            return
+        }
+
+        scheduler?.stop()
+        scheduler = null
+
+        currentLyrics = []
+
+        win.webContents.send(
+            'lyrics:unavailable',
+            {
+                track,
+                reason
+            }
+        )
+    }
+
     const startMockScheduler = () => {
 
         loadLyrics({
@@ -84,6 +112,7 @@ function startLyricsIPC(win) {
 
     const controller = {
         loadLyrics,
+        clearLyrics,
         getElapsedMs: () => scheduler?.getElapsedMs() || 0,
         pause: () => scheduler?.pause(),
         resume: () => scheduler?.resume(),
