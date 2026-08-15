@@ -163,6 +163,70 @@ body {
     opacity: var(--click-through-opacity, 0.70);
 }
 
+#paused-overlay {
+
+    position: absolute;
+    inset: 0;
+
+    z-index: 15;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: none;
+
+    background: rgba(0, 0, 0, 0);
+
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+
+    transition:
+        background 1400ms ease-in-out,
+        backdrop-filter 1400ms ease-in-out,
+        -webkit-backdrop-filter 1400ms ease-in-out;
+}
+
+#paused-overlay.is-visible {
+
+    display: flex;
+}
+
+#paused-overlay.is-blurring {
+
+    background: rgba(0, 0, 0, 0.22);
+
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+#paused-overlay .paused-text {
+
+    opacity: 0;
+
+    transform: scale(0.94);
+
+    letter-spacing: calc(4px * var(--ui-scale));
+
+    color: rgba(255, 255, 255, 0.92);
+
+    font-size: calc(22px * var(--ui-scale));
+    font-weight: 700;
+
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+
+    transition:
+        opacity 500ms ease-out,
+        transform 500ms ease-out;
+}
+
+#paused-overlay.show-text .paused-text {
+
+    opacity: 1;
+
+    transform: scale(1);
+}
+
 /* cinematic texture */
 
 #webgl-background {

@@ -4,6 +4,7 @@ const LrclibApi = require('../services/lrclib-api')
 const LocalLrc = require('../services/local-lrc')
 
 const PLAYBACK_VERIFY_INTERVAL_MS = 5_000
+const PAUSED_VERIFY_INTERVAL_MS = 3_000
 const SCHEDULER_WATCHDOG_MS = 8_000
 const SOFT_RESYNC_THRESHOLD_MS = 150
 const HARD_RESYNC_THRESHOLD_MS = 500
@@ -170,6 +171,18 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
                 )
             )
 
+            if (lyricResult.source === 'lrclib' && lyricResult.id) {
+
+                const lrclibDebugUrl =
+                    `https://lrclib.net/api/get/${lyricResult.id}`
+
+                win.webContents.executeJavaScript(
+                    `console.log(${JSON.stringify(
+                        `[LRCLIB] ${track.name} — ${lrclibDebugUrl}`
+                    )})`
+                ).catch(() => {})
+            }
+
             lyricsController.loadLyrics({
                 lines: lyricResult.lines,
                 startPositionMs:
@@ -245,8 +258,8 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
                 console.log('Lyrics scheduler paused')
             }
 
-            clearTimelineVerificationTimer()
             lastIsPlaying = false
+            startTimelineVerifier()
             return
         }
 
@@ -333,10 +346,14 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
 
     function getVerificationInterval() {
 
+        if (!lastPlaybackState?.isPlaying) {
+            return PAUSED_VERIFY_INTERVAL_MS
+        }
+
         const trackDurationMs =
             lastPlaybackState?.track?.durationMs || 0
 
-        if (!trackDurationMs || !lastPlaybackState?.isPlaying) {
+        if (!trackDurationMs) {
             return PLAYBACK_VERIFY_INTERVAL_MS
         }
 
@@ -359,7 +376,6 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
 
         clearTimelineVerificationTimer()
 
-        if (!lastIsPlaying && !lastPlaybackState?.isPlaying) return
         if (!activeTrackId) return
 
         const intervalMs =
@@ -412,7 +428,6 @@ function startSpotifyIPC(win, app, lyricsController, settings = {}) {
         if (
             generation === playbackGeneration &&
             expectedTrackId === activeTrackId &&
-            lastPlaybackState?.isPlaying &&
             activeTrackId
         ) {
             startTimelineVerifier()

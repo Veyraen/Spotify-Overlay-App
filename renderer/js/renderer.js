@@ -11,6 +11,9 @@ console.log(
 const lyricsList =
     document.getElementById('lyrics-list')
 
+const pausedOverlay =
+    document.getElementById('paused-overlay')
+
 const noLyricsMessage =
     document.getElementById('no-lyrics-message')
 
@@ -316,6 +319,44 @@ let lyrics = [
 ]
 
 let activeIndex = 0
+
+let wasSpotifyPlaying = true
+let pausedBlurTimer = null
+let pausedTextTimer = null
+
+const PAUSED_BLUR_DURATION_MS = 1400
+const PAUSED_TEXT_DELAY_MS = 200
+
+function showPausedOverlay() {
+    
+    if (pausedBlurTimer) clearTimeout(pausedBlurTimer)
+    if (pausedTextTimer) clearTimeout(pausedTextTimer)
+
+    pausedOverlay.classList.remove('show-text')
+    pausedOverlay.classList.add('is-visible')
+
+    requestAnimationFrame(() => {
+        pausedOverlay.classList.add('is-blurring')
+    })
+
+    pausedTextTimer = setTimeout(() => {
+        pausedOverlay.classList.add('show-text')
+    }, PAUSED_TEXT_DELAY_MS)
+}
+
+function hidePausedOverlay() {
+
+    if (pausedBlurTimer) clearTimeout(pausedBlurTimer)
+    if (pausedTextTimer) clearTimeout(pausedTextTimer)
+
+    pausedOverlay.classList.remove('is-blurring')
+    pausedOverlay.classList.remove('show-text')
+
+    pausedBlurTimer = setTimeout(() => {
+        pausedOverlay.classList.remove('is-visible')
+    }, PAUSED_BLUR_DURATION_MS)
+}
+
 let lyricElements = []
 let centerFrame = null
 let activeArtworkUrl = ''
@@ -420,11 +461,6 @@ function rgbToHsl(red, green, blue) {
         lightness
     }
 }
-
-console.log(
-    'require:',
-    typeof require
-)
 
 function hslToRgb(hue, saturation, lightness) {
 
@@ -1045,7 +1081,7 @@ function setActiveLyric(index) {
     if (!Number.isInteger(index)) return
 
     const nextIndex =
-        Math.max(0, Math.min(index, lyrics.length - 1))
+        Math.max(-1, Math.min(index, lyrics.length - 1))
 
     if (nextIndex === activeIndex) return
 
@@ -1575,10 +1611,6 @@ function initializeKawarp() {
     if (currentArtworkUrl) {
         kawarp.loadImage(currentArtworkUrl)
     }
-
-    console.log(
-        'KAWARP INITIALIZED'
-    )
 }
 
 function syncKawarpPreviewCanvasSize() {
@@ -2444,7 +2476,7 @@ if (window.electronAPI) {
 
         noLyricsMessage?.classList.remove('is-visible')
 
-        activeIndex = 0
+        activeIndex = -1
 
         renderLyrics(payload.lines)
 
@@ -2460,8 +2492,8 @@ if (window.electronAPI) {
 
     window.electronAPI.onLyricsUnavailable((payload) => {
 
-        activeIndex = 0
-        
+        activeIndex = -1
+
         renderLyrics([])
 
         noLyricsMessage?.classList.add('is-visible')
@@ -2495,6 +2527,19 @@ if (window.electronAPI) {
     window.electronAPI.onSpotifyPlaybackState((payload) => {
 
         setDebugState('spotifyPlayback', payload)
+
+        if (
+            typeof  payload?.isPlaying === 'boolean' &&
+            payload.isPlaying !== wasSpotifyPlaying
+        ) {
+            wasSpotifyPlaying = payload.isPlaying
+
+            if (payload.isPlaying) {
+                hidePausedOverlay()
+            } else {
+                showPausedOverlay()
+            }
+        }
 
         const trackId =
             payload?.track?.id
@@ -2656,11 +2701,6 @@ function setBackgroundVisibility({
 }
 
 function initializeSelectedBackground() {
-
-    console.log(
-        'BACKGROUND MODE:',
-        currentSettings?.overlay?.backgroundMode
-    )
 
     const mode =
         currentSettings?.overlay?.backgroundMode

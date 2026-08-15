@@ -121,6 +121,10 @@ class LyricScheduler {
             return 0
         }
 
+        if (positionMs < this.lyrics[0].timeMs) {
+            return -1
+        }
+
         let idealIndex = 0
 
         for (let index = 0; index < this.lyrics.length; index++) {
@@ -155,6 +159,18 @@ class LyricScheduler {
 
     emitActiveLine() {
 
+        if (this.activeIndex === -1) {
+
+            this.onLineChange({
+                index: -1,
+                line: null,
+                timeMs: null,
+                total: this.lyrics.length
+            })
+
+            return
+        }
+
         const line =
             this.lyrics[this.activeIndex]
 
@@ -173,7 +189,7 @@ class LyricScheduler {
         if (this.lyrics.length === 0) return
 
         this.activeIndex =
-            Math.max(0, Math.min(index, this.lyrics.length - 1))
+            Math.max(-1, Math.min(index, this.lyrics.length - 1))
 
         this.emitActiveLine()
     }
