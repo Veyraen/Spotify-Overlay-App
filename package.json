@@ -1,6 +1,6 @@
 {
   "name": "spotify-overlay-app",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "Spotify Overlay App",
   "main": "electron/main.js",
   "scripts": {

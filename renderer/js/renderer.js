@@ -72,6 +72,21 @@ const minimizeButton =
 const closeButton =
     document.getElementById('close-button')
 
+const fullscreenButton =
+    document.getElementById('fullscreen-button')
+
+const playbackProgress =
+    document.getElementById('playback-progress')
+
+const playbackProgressFill =
+    document.getElementById('playback-progress-fill')
+
+const playbackElapsedLabel =
+    document.getElementById('playback-elapsed')
+
+const playbackDurationLabel =
+    document.getElementById('playback-duration')
+
 const syncLyricsButton =
     document.getElementById('sync-lyrics-button')
 
@@ -155,9 +170,24 @@ function updateOverlayScale() {
             window.innerHeight
         ) / BASE_OVERLAY_SIZE
 
+    const isFullscreen =
+        overlay?.classList.contains('is-fullscreen')
+
+    const controlsScale =
+        Math.max(0.7, Math.min(scale, 1.45))
+
+    const uiScale = isFullscreen
+        ? scale
+        : controlsScale
+
     document.documentElement.style.setProperty(
         '--ui-scale',
-        Math.max(0.7, Math.min(scale, 1.45)).toFixed(3)
+        uiScale.toFixed(3)
+    )
+
+    document.documentElement.style.setProperty(
+        '--controls-scale',
+        controlsScale.toFixed(3)
     )
 
     requestAnimationFrame(cacheLyricLayout)
@@ -870,12 +900,12 @@ function getLyricSyncThreshold() {
     )
 }
 
-function updateLyricSyncButton() {
+function updateLyricSyncButton(effectiveOffset = lyricPreviewOffset) {
 
     if (!syncLyricsButton) return
 
     const shouldShow =
-        Math.abs(lyricPreviewOffset) >
+        Math.abs(effectiveOffset) >
         getLyricSyncThreshold()
 
     syncLyricsButton.classList.toggle(
@@ -892,8 +922,8 @@ function applyLyricReelPosition(animate = true) {
     const previewBounds =
         getLyricPreviewBounds(baseY)
 
-    lyricPreviewOffset =
-        clamp(
+    const effectivePreviewOffset =
+        clamp (
             lyricPreviewOffset,
             previewBounds.min,
             previewBounds.max
@@ -906,10 +936,10 @@ function applyLyricReelPosition(animate = true) {
 
     lyricsList.style.setProperty(
         '--lyric-reel-y',
-        `${baseY + lyricPreviewOffset}px`
+        `${baseY + effectivePreviewOffset}px`
     )
 
-    updateLyricSyncButton()
+    updateLyricSyncButton(effectivePreviewOffset)
 
     if (!animate) {
         requestAnimationFrame(() => {
@@ -1127,10 +1157,8 @@ function setActiveLyricSmooth(nextIndex) {
 
 function setActiveLyricStagger(nextIndex) {
 
-    // Record where every line is RIGHT NOW, before anything moves
     const previousTops = getLyricVisualTops()
 
-    // Cancel any in-flight stagger animations
     if (lyricStaggerFrame) {
         cancelAnimationFrame(lyricStaggerFrame)
         lyricStaggerFrame = null
@@ -1150,25 +1178,27 @@ function setActiveLyricStagger(nextIndex) {
     updateLyricClasses()
     cacheLyricLayout()
 
-    // Snap the reel instantly, preserving any user preview scroll offset
     const baseY = getActiveLyricBaseY()
     const previewBounds = getLyricPreviewBounds(baseY)
-    lyricPreviewOffset = clamp(lyricPreviewOffset, previewBounds.min, previewBounds.max)
+
+    const effectivePreviewOffset =
+        clamp(
+            lyricPreviewOffset,
+            previewBounds.min,
+            previewBounds.max
+        )
 
     lyricsList.classList.add('is-positioning')
-    lyricsList.style.setProperty('--lyric-reel-y', `${baseY + lyricPreviewOffset}px`)
-    updateLyricSyncButton()
-    lyricsList.offsetHeight  // flush
+    lyricsList.style.setProperty('--lyric-reel-y', `${baseY + effectivePreviewOffset}px`)
+    updateLyricSyncButton(effectivePreviewOffset)
+    lyricsList.offsetHeight
 
-    // Read where lines landed while everything is still frozen (no transitions)
     const nextTops = getLyricVisualTops()
 
     lyricsList.classList.remove('is-positioning')
 
     const wrapperHeight = lyricsWrapper.clientHeight
 
-    // Rank only visible lines top-to-bottom — upper lines clear out first,
-    // new active line settles in last
     const visibleOrder = lyricElements
         .map((element, i) => ({ element, i, top: nextTops[i] }))
         .filter(({ top }) => top > -wrapperHeight && top < wrapperHeight * 2)
@@ -2528,6 +2558,8 @@ if (window.electronAPI) {
 
         setDebugState('spotifyPlayback', payload)
 
+        updatePlaybackProgress(payload)
+
         if (
             typeof  payload?.isPlaying === 'boolean' &&
             payload.isPlaying !== wasSpotifyPlaying
@@ -2635,8 +2667,136 @@ clientIdPromptYesButton?.addEventListener(
     }
 )
 
+function formatPlaybackTime(ms) {
+
+    if (!Number.isFinite(ms) || ms < 0) return '0:00'
+
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+
+    return minutes + ':' + String(seconds).padStart(2, '0')
+}
+
+let playbackAnchorPositionMs = 0
+let playbackAnchorTimestamp = 0
+
+let playbackLastDisplayedMs = 0
+let playbackDurationMs = 0
+
+let playbackIsPlaying = false
+
+let playbackTrackId = null
+let playbackTickerFrame = null
+
+let playbackLastLabelSeconds = -1
+
+function computePredictedProgressMs() {
+
+    if (!playbackIsPlaying) return playbackAnchorPositionMs
+
+    const elapsedSinceAnchor =
+        performance.now() - playbackAnchorTimestamp
+
+    return playbackAnchorPositionMs + elapsedSinceAnchor
+}
+
+function renderPlaybackFrame() {
+
+    if (!playbackProgress) return
+
+    const rawMs =
+        computePredictedProgressMs()
+
+    const displayMs =
+        Math.min(
+            playbackDurationMs || rawMs,
+            Math.max(playbackLastDisplayedMs, rawMs)
+        )
+
+    playbackLastDisplayedMs = displayMs
+
+    const percent =
+        playbackDurationMs > 0
+            ? Math.min(100, (displayMs / playbackDurationMs) * 100)
+            : 0
+
+    playbackProgressFill.style.width = percent + '%'
+
+    const wholeSeconds =
+        Math.floor(displayMs / 1000)
+
+    if (wholeSeconds !== playbackLastLabelSeconds) {
+        playbackLastLabelSeconds = wholeSeconds
+        playbackElapsedLabel.textContent = formatPlaybackTime(displayMs)
+    }
+
+    if (playbackIsPlaying) {
+        playbackTickerFrame = requestAnimationFrame(renderPlaybackFrame)
+    }
+}
+
+function updatePlaybackProgress(payload) {
+
+    if (!playbackProgress) return
+
+    const verifiedMs = payload?.progressMs || 0
+    const durationMs = payload?.track?.durationMs || 0
+    const isPlaying = Boolean(payload?.isPlaying)
+    const trackId = payload?.track?.id || null
+
+    const isNewTrack =
+        trackId !== playbackTrackId
+
+    playbackTrackId = trackId
+    playbackDurationMs = durationMs
+    playbackDurationLabel.textContent = formatPlaybackTime(durationMs)
+
+    playbackAnchorPositionMs = verifiedMs
+    playbackAnchorTimestamp = performance.now()
+    playbackIsPlaying = isPlaying
+
+    if (!isPlaying || isNewTrack) {
+        playbackLastDisplayedMs = verifiedMs
+        playbackLastLabelSeconds = -1
+    }
+
+    if (playbackTickerFrame) {
+        cancelAnimationFrame(playbackTickerFrame)
+        playbackTickerFrame = null
+    }
+
+    renderPlaybackFrame()
+}
+
+function refreshLyricsModeChange() {
+
+    requestAnimationFrame(() => {
+
+        cacheLyricLayout()
+        syncLyricsToCurrent()
+
+    })
+}
+
 closeButton.addEventListener('click', () => {
     window.electronAPI?.closeWindow?.()
+})
+
+fullscreenButton?.addEventListener('click', (event) => {
+    event.stopPropagation()
+    window.electronAPI?.toggleFullscreen?.()
+})
+
+window.electronAPI?.onFullscreenChange?.((payload) => {
+    overlay.classList.toggle(
+        'is-fullscreen',
+        Boolean(payload?.isFullscreen)
+    )
+    updateOverlayScale()
+    setupScrollingText(trackTitle)
+    setupScrollingText(trackArtist)
+    refreshLyricsModeChange()
 })
 
 syncLyricsButton?.addEventListener(

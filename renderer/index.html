@@ -62,6 +62,18 @@
                 alt=""
             />
 
+            <div id="playback-progress" aria-hidden="true">
+
+                <span id="playback-elapsed" class="playback-time">0:00</span>
+
+                <div id="playback-progress-track">
+                    <div id="playback-progress-fill"></div>
+                </div>
+
+                <span id="playback-duration" class="playback-time">0:00</span>
+
+            </div>
+
             <div id="track-meta">
 
                 <div id="track-title">
@@ -103,6 +115,13 @@
                 aria-label="Close"
             ></button>
 
+            <button
+                id="fullscreen-button"
+                class="window-control fullscreen-control"
+                type="button"
+                aria-label="Toggle fullscreen"
+            ></button>
+
         </div>
 
         <div id="lyrics-wrapper">
@@ -136,6 +155,8 @@
 
                 <h2>Settings</h2>
 
+                <div class="settings-column settings-column-left">
+                
                 <label>
                     <span>Spotify Client ID</span>
                     <input
@@ -221,6 +242,8 @@
 
                 </div>
 
+                <div class="settings-column settings-column-right">
+
                 <div class="settings-group-title">Shortcuts</div>
 
                 <label>
@@ -294,6 +317,8 @@
                     >
                         Save
                     </button>
+
+                </div>
 
                 </div>
 

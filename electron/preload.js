@@ -91,6 +91,23 @@ contextBridge.exposeInMainWorld(
             ipcRenderer.send('window:close')
         },
 
+        toggleFullscreen: () => (
+            ipcRenderer.invoke('window:toggle-fullscreen')
+        ),
+
+        onFullscreenChange: (callback) => {
+
+            const listener =
+                (_, data) => callback(data)
+
+            ipcRenderer.on('window:fullscreen-change', listener)
+
+            return () => {
+                ipcRenderer.removeListener('window:fullscreen-change', listener)
+            }
+
+        },
+
         startWindowResize: () => (
             ipcRenderer.invoke('window:resize-start')
         ),

@@ -27,6 +27,8 @@ let spotifyController
 let lyricsController
 let settingsStore
 let resizeStartBounds = null
+let isWindowFullscreen = false
+let preFullscreenBounds = null
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught main process error:', error)
@@ -39,6 +41,7 @@ process.on('unhandledRejection', (error) => {
 async function saveWindowPosition() {
 
     if (!settingsStore || !overlayWindow || overlayWindow.isDestroyed()) return
+    if (isWindowFullscreen) return
 
     const bounds =
         overlayWindow.getBounds()
@@ -51,6 +54,94 @@ async function saveWindowPosition() {
 
         return settings
     })
+}
+
+async function persistPreFullscreenBounds() {
+
+    if (!settingsStore || !preFullscreenBounds) return
+
+    const bounds = preFullscreenBounds
+
+    await settingsStore.update((settings) => {
+
+        settings.window.x = bounds.x
+        settings.window.y = bounds.y
+        settings.window.size = bounds.width
+
+        return settings
+    })
+}
+
+function notifyFullscreenChange(isFullscreen) {
+
+    overlayWindow?.webContents.send(
+        'window:fullscreen-change',
+        { isFullscreen }
+    )
+}
+
+function restorePreFullscreenBounds() {
+
+    if (!overlayWindow || overlayWindow.isDestroyed()) return
+    if (!preFullscreenBounds) return
+
+    overlayWindow.setBounds(preFullscreenBounds)
+    preFullscreenBounds = null
+}
+
+function refreshWindowInputRegion(win) {
+
+    if (!win || win.isDestroyed()) return
+
+    win.setShape([])
+
+    if (!isWindowFullscreen) {
+        win.setBounds(win.getBounds())
+    }
+
+    win.setAlwaysOnTop(!isWindowFullscreen, 'screen-saver')
+    win.focus()
+}
+
+function enterWindowFullscreen() {
+
+    if (!overlayWindow || overlayWindow.isDestroyed()) return false
+    if (isWindowFullscreen) return true
+
+    preFullscreenBounds =
+        overlayWindow.getBounds()
+
+    isWindowFullscreen = true
+
+    overlayWindow.setFullScreen(true)
+    notifyFullscreenChange(true)
+
+    setTimeout(() => {
+        refreshWindowInputRegion(overlayWindow)
+    }, 50)
+
+    return true
+}
+
+function exitWindowFullscreen() {
+
+    if (!overlayWindow || overlayWindow.isDestroyed()) return false
+    if (!isWindowFullscreen) return false
+
+    overlayWindow.setFullScreen(false)
+
+    setTimeout(() => {
+
+        if (!isWindowFullscreen) return
+
+        isWindowFullscreen = false
+        restorePreFullscreenBounds()
+        notifyFullscreenChange(false)
+        refreshWindowInputRegion(overlayWindow)
+
+    }, 250)
+
+    return false
 }
 
 async function saveClickThrough(enabled) {
@@ -180,6 +271,24 @@ async function createAppWindow() {
 
     overlayWindow = createOverlayWindow(settings)
 
+    overlayWindow.on('enter-full-screen', () => {
+        isWindowFullscreen = true
+
+        setTimeout(() => {
+            refreshWindowInputRegion(overlayWindow)
+        }, 50)
+    })
+
+    overlayWindow.on('leave-full-screen', () => {
+        isWindowFullscreen = false
+        restorePreFullscreenBounds()
+        notifyFullscreenChange(false)
+
+        setTimeout(() => {
+            refreshWindowInputRegion(overlayWindow)
+        }, 50)
+    })
+
     lyricsController = startLyricsIPC(overlayWindow)
     spotifyController = startSpotifyIPC(overlayWindow, app, lyricsController, settings)
 
@@ -235,6 +344,17 @@ app.whenReady().then(async () => {
 
     ipcMain.on('window:close', () => {
         app.quit()
+    })
+
+    ipcMain.handle('window:toggle-fullscreen', () => {
+
+        if (!overlayWindow || overlayWindow.isDestroyed()) return false
+
+        if (isWindowFullscreen) {
+            return exitWindowFullscreen()
+        }
+
+        return enterWindowFullscreen()
     })
 
     ipcMain.handle('window:resize-start', () => {
@@ -301,6 +421,25 @@ app.on('will-quit', () => {
 
     spotifyController?.stopPlaybackMonitor?.()
     globalShortcut.unregisterAll()
+
+})
+
+let isPersistingBoundsOnQuit = false
+
+app.on('before-quit', (event) => {
+
+    if (!isWindowFullscreen || !preFullscreenBounds || isPersistingBoundsOnQuit) return
+
+    event.preventDefault()
+    isPersistingBoundsOnQuit = true
+
+    persistPreFullscreenBounds()
+        .catch((error) => {
+            console.error(error)
+        })
+        .finally(() => {
+            app.quit()
+        })
 
 })
 
