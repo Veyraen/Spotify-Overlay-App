@@ -816,15 +816,9 @@ function renderLyrics(nextLyrics = lyrics) {
         highlightText.classList.add('lyric-text-highlight')
         highlightText.textContent = lyricText
 
-        const revealEdge =
-            document.createElement('span')
-
-        revealEdge.classList.add('lyric-reveal-edge')
-
         div.append(
             baseText,
-            highlightText,
-            revealEdge
+            highlightText
         )
 
         lyricElements.push(div)
@@ -2559,7 +2553,6 @@ if (window.electronAPI) {
         setDebugState('spotifyPlayback', payload)
 
         updatePlaybackProgress(payload)
-
         if (
             typeof  payload?.isPlaying === 'boolean' &&
             payload.isPlaying !== wasSpotifyPlaying
@@ -2814,7 +2807,6 @@ lyricsWrapper.addEventListener(
 
 setupTopLeftResize()
 updateOverlayScale()
-
 window.addEventListener('resize', () => {
     updateOverlayScale()
     cacheLyricLayout()

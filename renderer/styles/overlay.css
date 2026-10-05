@@ -1,3 +1,12 @@
+@font-face {
+    font-family: "Plus Jakarta Sans";
+    src: url("../assets/fonts/Plus_Jakarta_Sans.ttf")
+        format("truetype");
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -23,12 +32,20 @@ body {
     background: transparent;
 
     font-family:
-        Inter,
-        system-ui,
+        "Plus Jakarta Sans",
         sans-serif;
 }
 
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 body {
+
+    position: relative;
 
     display: flex;
     justify-content: center;
@@ -52,46 +69,16 @@ body {
     justify-content: center;
     align-items: center;
 
-    background:
-        radial-gradient(
-            ellipse 360px 260px at 18% 8%,
-            var(--artwork-light, rgba(245,245,245,0.38)),
-            transparent 62%
-        ),
-        radial-gradient(
-            ellipse 420px 300px at 82% 18%,
-            var(--artwork-secondary, rgba(58,58,58,0.30)),
-            transparent 58%
-        ),
-        radial-gradient(
-            ellipse 360px 300px at 52% 82%,
-            var(--artwork-tertiary, rgba(230,230,230,0.34)),
-            transparent 64%
-        ),
-        var(--artwork-base, rgb(105,105,105));
+    /* The artwork effect owns the whole surface; no glass frame behind it. */
+    background: transparent;
 
-    backdrop-filter:
-        blur(6px)
-        saturate(104%);
+    border: none;
 
-    -webkit-backdrop-filter:
-        blur(6px)
-        saturate(104%);
-
-    border:
-        1px solid rgba(255,255,255,0.22);
-
-    box-shadow:
-        0 20px 60px rgba(0,0,0,0.28),
-        inset 0 1px 0 rgba(255,255,255,0.32),
-        inset 0 -1px 0 rgba(0,0,0,0.10);
+    box-shadow: none;
 
     -webkit-app-region: drag;
 
     isolation: isolate;
-
-    animation:
-        overlayBreath 12s ease-in-out infinite;
 
     transition:
         opacity 220ms ease,
@@ -226,16 +213,6 @@ body {
     opacity: 1;
 
     transform: scale(1);
-}
-
-/* Fullscreen mode */
-
-.fullscreen-control {
-    background-image: url('../assets/icons/Enter-Fullscreen.png');
-}
-
-#overlay.is-fullscreen .fullscreen-control {
-    background-image: url('../assets/icons/Exit-Fullscreen.png');
 }
 
 body:has(#overlay.is-fullscreen) {
@@ -444,7 +421,7 @@ body:has(#overlay.is-fullscreen) {
 
     z-index: 0;
 
-    opacity: 0.62;
+    opacity: 1;
 
     pointer-events: none;
 }
@@ -716,7 +693,7 @@ body:has(#overlay.is-fullscreen) {
 
     z-index: 0;
 
-    opacity: 0.62;
+    opacity: 1;
 
     pointer-events: none;
 }
@@ -725,7 +702,7 @@ body:has(#overlay.is-fullscreen) {
 
     position: absolute;
 
-    inset: 1;
+    inset: 0;
 
     overflow: hidden;
 
@@ -991,6 +968,9 @@ body:has(#overlay.is-fullscreen) {
 
 .window-control {
 
+    display: grid;
+    place-items: center;
+
     width: calc(22px * var(--controls-scale));
     height: calc(22px * var(--controls-scale));
 
@@ -998,11 +978,6 @@ body:has(#overlay.is-fullscreen) {
     border-radius: 50%;
 
     background-color: rgba(0,0,0,0.24);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size:
-        calc(12px * var(--controls-scale))
-        calc(12px * var(--controls-scale));
 
     cursor: pointer;
 
@@ -1025,16 +1000,14 @@ body:has(#overlay.is-fullscreen) {
     transform: scale(1.04);
 }
 
-.settings-control {
-    background-image: url('../assets/icons/Settings.png');
-}
+.window-control-icon {
 
-.minimize-control {
-    background-image: url('../assets/icons/Minimize.png');
-}
+    display: block;
 
-.close-control {
-    background-image: url('../assets/icons/Close.png');
+    max-width: calc(12px * var(--controls-scale));
+    max-height: calc(12px * var(--controls-scale));
+
+    pointer-events: none;
 }
 
 #settings-panel {
@@ -1928,40 +1901,6 @@ body:has(#overlay.is-fullscreen) {
     filter: blur(0);
 }
 
-.lyric-line.active::before {
-
-    content: '';
-
-    position: absolute;
-
-    inset: -12px -20px;
-
-    background:
-        radial-gradient(
-            ellipse at center,
-            rgba(255,255,255,0.32) 0%,
-            rgba(255,255,255,0.13) 45%,
-            transparent 75%
-        );
-
-    filter: blur(18px);
-
-    opacity: 0;
-
-    clip-path:
-        inset(0 0 100% 0);
-
-    animation:
-        activeLyricRevealGlow
-            var(--active-reveal-duration, 1200ms)
-            linear
-            forwards;
-
-    pointer-events: none;
-
-    z-index: -1;
-}
-
 .lyric-text-base {
 
     display: block;
@@ -1993,10 +1932,7 @@ body:has(#overlay.is-fullscreen) {
         inset(0 0 100% 0);
 
     text-shadow:
-        0 0 14px rgba(255,255,255,0.52),
-        0 0 36px rgba(255,255,255,0.34),
-        0 0 84px rgba(255,255,255,0.20),
-        0 2px 30px rgba(0,0,0,0.65);
+        0 2px 18px rgba(0,0,0,0.48);
 
     pointer-events: none;
 }
@@ -2007,43 +1943,6 @@ body:has(#overlay.is-fullscreen) {
 
     animation:
         activeLyricRevealText
-            var(--active-reveal-duration, 1200ms)
-            linear
-            forwards;
-}
-
-.lyric-reveal-edge {
-
-    position: absolute;
-
-    top: -0.4em;
-    right: var(--lyric-line-padding);
-    left: var(--lyric-line-padding);
-
-    height: 0.55em;
-
-    background:
-        linear-gradient(
-            to bottom,
-            transparent 0%,
-            rgba(255,255,255,0.72) 42%,
-            rgba(255,255,255,0.36) 62%,
-            transparent 100%
-        );
-
-    filter: blur(6px);
-
-    opacity: 0;
-
-    mix-blend-mode: screen;
-
-    pointer-events: none;
-}
-
-.lyric-line.active .lyric-reveal-edge {
-
-    animation:
-        activeLyricRevealEdge
             var(--active-reveal-duration, 1200ms)
             linear
             forwards;
@@ -2259,46 +2158,6 @@ body:has(#overlay.is-fullscreen) {
     100% {
         clip-path:
             inset(0 0 0 0);
-    }
-}
-
-@keyframes activeLyricRevealGlow {
-
-    0% {
-        clip-path:
-            inset(0 0 100% 0);
-
-        opacity: 0;
-    }
-
-    100% {
-        clip-path:
-            inset(0 0 0 0);
-
-        opacity: 0.58;
-    }
-}
-
-@keyframes activeLyricRevealEdge {
-
-    0% {
-        top: -0.45em;
-
-        opacity: 0;
-    }
-
-    8% {
-        opacity: 0.82;
-    }
-
-    92% {
-        opacity: 0.82;
-    }
-
-    100% {
-        top: calc(100% - 0.08em);
-
-        opacity: 0;
     }
 }
 
