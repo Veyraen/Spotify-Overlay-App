@@ -18,6 +18,48 @@ function base64Url(buffer) {
     .replace(/=+$/g, "");
 }
 
+function renderCallbackPage({ ok, title, message }) {
+  const accent = ok ? "#7c5cff" : "#ff5a5f"; // swap for Supra's accent color
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Supra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 0%, #1b1b2b, #0b0b12 70%);
+    color: #fff; font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  .card {
+    width: min(420px, 90vw); padding: 40px 32px; text-align: center;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; backdrop-filter: blur(20px);
+  }
+  .icon {
+    width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 30px;
+    background: ${accent}22; color: ${accent}; border: 2px solid ${accent};
+  }
+  h1 { margin: 0 0 8px; font-size: 24px; }
+  p  { margin: 0; color: rgba(255,255,255,0.65); line-height: 1.5; }
+  .brand { margin-top: 28px; font-size: 12px; letter-spacing: 3px;
+           text-transform: uppercase; color: rgba(255,255,255,0.35); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">${ok ? "✓" : "!"}</div>
+    <h1>${title}</h1>
+    <p>${message}</p>
+    <div class="brand">Supra</div>
+  </div>
+</body>
+</html>`;
+}
+
 function createCodeVerifier() {
   return base64Url(crypto.randomBytes(64));
 }
@@ -115,8 +157,17 @@ class SpotifyAuth {
         }
 
         if (callbackUrl.searchParams.get("state") !== state) {
-          response.writeHead(400);
-          response.end("Invalid state");
+          response.writeHead(400, {
+            "Content-Type": "text/html; charset=utf-8",
+          });
+          response.end(
+            renderCallbackPage({
+              ok: false,
+              title: "Something went wrong",
+              message:
+                "The login request didn't match. Close this tab and try again from Supra.",
+            }),
+          );
           server.close();
           reject(new Error("Invalid Spotify auth state"));
           return;
@@ -125,8 +176,17 @@ class SpotifyAuth {
         const error = callbackUrl.searchParams.get("error");
 
         if (error) {
-          response.writeHead(400);
-          response.end("Spotify authorization failed");
+          response.writeHead(400, {
+            "Content-Type": "text/html; charset=utf-8",
+          });
+          response.end(
+            renderCallbackPage({
+              ok: false,
+              title: "Authorization failed",
+              message:
+                "Spotify didn't approve the login. Close this tab and try again from Supra.",
+            }),
+          );
           server.close();
           reject(new Error(error));
           return;
@@ -135,10 +195,15 @@ class SpotifyAuth {
         const code = callbackUrl.searchParams.get("code");
 
         response.writeHead(200, {
-          "Content-Type": "text/html",
+          "Content-Type": "text/html; charset=utf-8",
         });
         response.end(
-          "<h1>Spotify connected</h1><p>You can return to Supra.</p>",
+          renderCallbackPage({
+            ok: true,
+            title: "You're connected",
+            message:
+              "Spotify is linked to Supra. You can close this tab and return to the app.",
+          }),
         );
 
         server.close();

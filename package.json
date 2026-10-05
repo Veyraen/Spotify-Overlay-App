@@ -1,6 +1,7 @@
 {
   "name": "supra",
-  "version": "2.0",
+  "author": "Radiant Studio",
+  "version": "2.0.0",
   "description": "Supra",
   "main": "electron/main.js",
   "scripts": {
@@ -19,8 +20,11 @@
     "three": "^0.184.0"
   },
   "build": {
-    "appId": "com.elvan.spotifylyricsoverlay",
+    "appId": "com.elvan.supra",
     "productName": "Supra",
+    "nsis": {
+      "artifactName": "Supra-Setup.${ext}"
+    },
     "directories": {
       "output": "dist"
     },

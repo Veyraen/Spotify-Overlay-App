@@ -1282,10 +1282,10 @@ function handleLyricsWheel(event) {
 
 function setDebugState(key, value) {
 
-    window.spotifyLyricsOverlay =
-        window.spotifyLyricsOverlay || {}
+    window.supra =
+        window.supra || {}
 
-    window.spotifyLyricsOverlay[key] =
+    window.supra[key] =
         value
 }
 
@@ -2824,8 +2824,8 @@ window.addEventListener('resize', () => {
     syncKawarpCanvasSize()
 })
 
-window.spotifyLyricsOverlay = {
-    ...window.spotifyLyricsOverlay,
+window.supra = {
+    ...window.supra,
     renderLyrics,
     setActiveLyric
 }
