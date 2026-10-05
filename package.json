@@ -1,7 +1,7 @@
 {
-  "name": "spotify-overlay-app",
-  "version": "1.6.5",
-  "description": "Spotify Overlay App",
+  "name": "supra",
+  "version": "2.0",
+  "description": "Supra",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.elvan.spotifylyricsoverlay",
-    "productName": "Spotify Overlay",
+    "productName": "Supra",
     "directories": {
       "output": "dist"
     },
